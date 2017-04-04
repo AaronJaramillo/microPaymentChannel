@@ -11,7 +11,7 @@ using namespace bc::chain;
 
 int main()
 {
-	HD_Wallet wallet(split("chase pair scorpion slab pause imitate dog blouse check dignity message strong"));
+	HD_Wallet wallet(split(""));
 	ec_public payee = wallet.childPublicKey(2).point();
 
 	channelPayer channel(wallet, 1, payee, "1.98");
@@ -19,5 +19,12 @@ int main()
 	channel.signBond();
 	std::cout << encode_base16(channel.getBond().to_data()) << std::endl;
 	std::cout << encode_base16(channel.getRefund().to_data()) << std::endl;
+
+	channel.signRefund();
+	std::cout << "\n" << encode_base16(channel.getRefund().to_data()) << std::endl;
+	std::cout << script().verify(channel.getBond(), 0, all_rules).message() << std::endl;
+	channel.validRefund(channel.getRefund());
+
+
 
 }

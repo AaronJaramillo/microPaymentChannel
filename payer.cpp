@@ -124,6 +124,13 @@ public:
 		bond.inputs()[0].set_script(script(ops));
 
 	}
+	void signRefund()
+	{
+		endorsement sig;
+		script().create_endorsement(sig, wallet.childPrivateKey(HDindex).secret(), redeemScript, refund, 0, all);
+		operation::list ops {operation(sig)};
+		refund.inputs()[0].set_script(script(ops));
+	}
 
 	client::connection_type connectionSettings()
 	{
@@ -140,41 +147,54 @@ public:
 	// 	client::connection_type connection = connectionSettings();
 	// 	return client::obelisk_client client(connection);
 	// }
-
-	points_value getOutputs(payment_address address, uint64_t amount)
-	{
-		client::obelisk_client client(connection);
-
-		points_value val1;
-		static const auto on_done = [&val1](const points_value& vals) {
-
-			std::cout << "Success: " << vals.value() << std::endl;
-			val1 = vals;
-			
-
-		};
-
-		static const auto on_error = [](const code& ec) {
-
-			std::cout << "Error Code: " << ec.message() << std::endl;
-
-		};
-
-		if(!client.connect(connection))
+	void validRefund(transaction refundTX)
 		{
-			std::cout << "Fail" << std::endl;
-		} else {
-			std::cout << "Connection Succeeded" << std::endl;
-		}
+			endorsement endorse = refundTX.inputs()[0].script().to_data(1);
+			ec_signature sig;
 
-		client.blockchain_fetch_unspent_outputs(on_error, on_done, address, amount, select_outputs::algorithm::greedy);
-		
-		client.wait();
-		
-		
-		//return allPoints;
-		return val1;
-	}
+			parse_signature(sig, { endorse.begin(), endorse.end() - 1 },
+	            0);
+			if(script::check_signature(sig, endorse.back(), payerKey, redeemScript, refundTX, 0))
+			{
+				std::cout << "Confirmed" << std::endl;
+			}else{
+				std::cout << "Invalid" << std::endl;
+			}
+		}
+	points_value getOutputs(payment_address address, uint64_t amount)
+		{
+			client::obelisk_client client(connection);
+
+			points_value val1;
+			static const auto on_done = [&val1](const points_value& vals) {
+
+				std::cout << "Success: " << vals.value() << std::endl;
+				val1 = vals;
+				
+
+			};
+
+			static const auto on_error = [](const code& ec) {
+
+				std::cout << "Error Code: " << ec.message() << std::endl;
+
+			};
+
+			if(!client.connect(connection))
+			{
+				std::cout << "Fail" << std::endl;
+			} else {
+				std::cout << "Connection Succeeded" << std::endl;
+			}
+
+			client.blockchain_fetch_unspent_outputs(on_error, on_done, address, amount, select_outputs::algorithm::greedy);
+			
+			client.wait();
+			
+			
+			//return allPoints;
+			return val1;
+		}
 
 	transaction getBond()
 	{
